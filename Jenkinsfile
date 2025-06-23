@@ -8,7 +8,7 @@ pipeline {
 	        MINOR = '0'
 	        //Orchestrator Services
 	        UIPATH_ORCH_URL = "https://cloud.uipath.com/"
-	        UIPATH_ORCH_LOGICAL_NAME = "RekhaAdin1"
+	        UIPATH_ORCH_LOGICAL_NAME = "rekhaadeen@gmail.com"
 	        UIPATH_ORCH_TENANT_NAME = "techy_automation"
 	        UIPATH_ORCH_FOLDER_NAME = "Test"
 	    }
