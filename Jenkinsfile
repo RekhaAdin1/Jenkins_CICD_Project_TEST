@@ -46,7 +46,7 @@ pipeline {
                     disableBuiltInNugetFeeds: false,
                     traceLevel: 'Verbose',
                     useOrchestrator: true,
-                    version: CurrentVersion()
+                    version: [$class: 'AutoVersion']
                 )
             }
         }
