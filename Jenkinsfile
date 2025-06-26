@@ -1,113 +1,81 @@
 pipeline {
-	    agent any
-	
+    agent any  // Updated from 'label "UiPathLabel"' to run on any available agent
 
-	        // Environment Variables
-	        environment {
-	        MAJOR = '1'
-	        MINOR = '0'
-	        //Orchestrator Services
-	        UIPATH_ORCH_URL = "https://cloud.uipath.com/"
-	        UIPATH_ORCH_LOGICAL_NAME = "RekhaAdin1"
-	        UIPATH_ORCH_TENANT_NAME = "techy_automation"
-	        UIPATH_ORCH_FOLDER_NAME = "Test"
-	    }
-	
+    environment {
+        MAJOR = '1'
+        MINOR = '0'
+    }
 
-	    stages {
-	
+    stages {
 
-	        // Printing Basic Information
-	        stage('Preparing'){
-	            steps {
-	                echo "Jenkins Home ${env.JENKINS_HOME}"
-	                echo "Jenkins URL ${env.JENKINS_URL}"
-	                echo "Jenkins JOB Number ${env.BUILD_NUMBER}"
-	                echo "Jenkins JOB Name ${env.JOB_NAME}"
-	                echo "GitHub BranhName ${env.BRANCH_NAME}"
-	                checkout scm
-	
+        stage('Check dotnet on the agent machine') {
+            steps {
+                script {
+                    echo 'checking dotnet version...'
+                    bat 'dotnet --version'
+                    echo 'Printing PATH...'
+                    bat 'echo %PATH%'
+                    echo 'Displaying the location of the dotnet.exe...'
+                    bat 'where dotnet'
+                }
+            }
+        }
 
-	            }
-	        }
-	
+        stage('Build Package') {
+            steps {
+                echo "Start building the package on ${WORKSPACE}\\Output"
+                UiPathPack(
+                    credentials: ExternalApp(
+                        accountForApp: 'techy_automation',
+                        applicationId: '67b6e381-06f5-4745-9dd6-b11de69de887',
+                        applicationScope: 'OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSetExecutions OR.TestSets OR.TestSetSchedules OR.Users.Read',
+                        applicationSecret: 'UiPathSecretKey',
+                        identityUrl: ''
+                    ),
+                    orchestratorAddress: 'https://cloud.uipath.com/',
+                    orchestratorTenant: 'DefaultTenant',
+                    outputPath: '${WORKSPACE}\\Output',
+                    outputType: 'Process',
+                    projectJsonPath: 'D:\\UiPath\\JenkinHellowordCloudIntegration\\project.json',
+                    projectUrl: '',
+                    repositoryBranch: '',
+                    repositoryCommit: '',
+                    repositoryType: '',
+                    repositoryUrl: '',
+                    splitOutput: false,
+                    disableBuiltInNugetFeeds: false,
+                    traceLevel: 'Verbose',
+                    useOrchestrator: true,
+                    version: CurrentVersion()
+                )
+            }
+        }
 
-	         // Build Stages
-	        stage('Build') {
-	            steps {
-	                echo "Building..with ${WORKSPACE}"
-	                UiPathPack (
-	                      outputPath: "Output\\${env.BUILD_NUMBER}",
-	                      projectJsonPath: "project.json",
-	                      version: [$class: 'ManualVersionEntry', version: "${MAJOR}.${MINOR}.${env.BUILD_NUMBER}"],
-	                      useOrchestrator: false,
-						  traceLevel: 'None'
-	        )
-	            }
-	        }
-	         // Test Stages
-	        stage('Test') {
-	            steps {
-	                echo 'Testing..the workflow...'
-	            }
-	        }
-	
+        stage('Deploy Package') {
+            steps {
+                echo "Start deploying the package from ${WORKSPACE}\\Output"
+                UiPathDeploy(
+                    createProcess: true,
+                    credentials: ExternalApp(
+                        accountForApp: 'techy_automation',
+                        applicationId: '67b6e381-06f5-4745-9dd6-b11de69de887',
+                        applicationScope: 'OR.Assets OR.BackgroundTasks OR.Execution OR.Folders OR.Jobs OR.Machines.Read OR.Monitoring OR.Robots.Read OR.Settings.Read OR.TestSetExecutions OR.TestSets OR.TestSetSchedules OR.Users.Read',
+                        applicationSecret: 'UiPathSecretKey',
+                        identityUrl: ''
+                    ),
+                    entryPointPaths: 'Main.xaml',
+                    environments: '',
+                    folderName: 'Test',
+                    ignoreLibraryDeployConflict: false,
+                    orchestratorAddress: 'https://cloud.uipath.com/',
+                    orchestratorTenant: 'DefaultTenant',
+                    packagePath: '${WORKSPACE}\\Output',
+                    processName: 'TestJenkinsDeployedPackage',
+                    processNames: '',
+                    traceLevel: 'Verbose'
+                )
+            }
+        }
 
-	         // Deploy Stages
-	        stage('Deploy to UAT') {
-	            steps {
-	                echo "Deploying ${BRANCH_NAME} to UAT "
-	                UiPathDeploy (
-	                packagePath: "Output\\${env.BUILD_NUMBER}",
-	                orchestratorAddress: "${UIPATH_ORCH_URL}",
-	                orchestratorTenant: "${UIPATH_ORCH_TENANT_NAME}",
-	                folderName: "${UIPATH_ORCH_FOLDER_NAME}",
-	                environments: 'DEV',
-	                //credentials: [$class: 'UserPassAuthenticationEntry', credentialsId: 'APIUserKey']
-	                credentials: Token(accountName: "${UIPATH_ORCH_LOGICAL_NAME}", credentialsId: 'APIUserKey'), 
-					traceLevel: 'None',
-					entryPointPaths: 'Main.xaml'
-	
-
-	        )
-	            }
-	        }
-	
-
-	
-
-	         // Deploy to Production Step
-	        stage('Deploy to Production') {
-	            steps {
-	                echo 'Deploy to Production'
-	                }
-	            }
-	    }
-	
-
-	    // Options
-	    options {
-	        // Timeout for pipeline
-	        timeout(time:80, unit:'MINUTES')
-	        skipDefaultCheckout()
-	    }
-	
-
-	
-
-	    // 
-	    post {
-	        success {
-	            echo 'Deployment has been completed!'
-	        }
-	        failure {
-	          echo "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.JOB_DISPLAY_URL})"
-	        }
-	        always {
-	            /* Clean workspace if success */
-	            cleanWs()
-	        }
-	    }
-	
-
-	}
+    }
+}
